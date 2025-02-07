@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   appName: 'Daily Stoic Quotes',
   webDir: 'dist',
   server: {
-    url: 'http://10.0.2.2:5173',
+    androidScheme: 'http',
+    url: 'http://10.0.2.2:8080',
     cleartext: true
   },
   android: {
