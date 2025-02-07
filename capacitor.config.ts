@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appName: 'Daily Stoic Quotes',
   webDir: 'dist',
   server: {
-    url: 'https://REPLACE_WITH_PROJECT_ID.lovableproject.com?forceHideBadge=true',
+    url: 'http://10.0.2.2:5173',
     cleartext: true
   },
   android: {
