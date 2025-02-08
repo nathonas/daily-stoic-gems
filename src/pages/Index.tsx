@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Quote } from '@/components/Quote';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, isAfter, isBefore, addDays, setHours, setMinutes } from 'date-fns';
 
 interface QuoteType {
   text: string;
@@ -275,12 +276,30 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get today's date and use it to generate a consistent quote for the day
-    const today = new Date().toDateString();
-    const hash = Array.from(today).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const todayIndex = hash % QUOTES.length;
-    setCurrentQuoteIndex(todayIndex);
-    setIsLoading(false);
+    const updateDailyQuote = () => {
+      const now = new Date();
+      const today8AM = setHours(setMinutes(new Date(), 0), 8);
+      const tomorrow8AM = addDays(today8AM, 1);
+      
+      // Generate a seed based on the current date (will be same all day)
+      const dateStr = format(now, 'yyyy-MM-dd');
+      const seed = Array.from(dateStr).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const todayIndex = seed % QUOTES.length;
+      
+      setCurrentQuoteIndex(todayIndex);
+      setIsLoading(false);
+
+      // Schedule next update
+      if (isAfter(now, today8AM) && isBefore(now, tomorrow8AM)) {
+        const timeUntilTomorrow = tomorrow8AM.getTime() - now.getTime();
+        setTimeout(updateDailyQuote, timeUntilTomorrow);
+      } else if (isBefore(now, today8AM)) {
+        const timeUntil8AM = today8AM.getTime() - now.getTime();
+        setTimeout(updateDailyQuote, timeUntil8AM);
+      }
+    };
+
+    updateDailyQuote();
   }, []);
 
   const handlePrevious = () => {
