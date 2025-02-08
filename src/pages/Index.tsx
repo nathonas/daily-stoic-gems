@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Quote } from '@/components/Quote';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, isAfter, isBefore, addDays, setHours, setMinutes } from 'date-fns';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 interface QuoteType {
   text: string;
@@ -276,7 +278,18 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const updateDailyQuote = () => {
+    // Request notification permissions
+    const requestPermissions = async () => {
+      try {
+        await LocalNotifications.requestPermissions();
+      } catch (e) {
+        console.error('Error requesting notification permissions:', e);
+      }
+    };
+
+    requestPermissions();
+
+    const updateDailyQuote = async () => {
       const now = new Date();
       const today8AM = setHours(setMinutes(new Date(), 0), 8);
       const tomorrow8AM = addDays(today8AM, 1);
@@ -289,6 +302,26 @@ const Index = () => {
       setCurrentQuoteIndex(todayIndex);
       setIsLoading(false);
 
+      // Schedule notification for today's quote
+      try {
+        const quote = QUOTES[todayIndex];
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              title: 'Daily Stoic Quote',
+              body: `"${quote.text.substring(0, 100)}${quote.text.length > 100 ? '...' : ''}" - ${quote.author}`,
+              id: 1,
+              schedule: { at: today8AM },
+              extra: {
+                quoteIndex: todayIndex
+              }
+            }
+          ]
+        });
+      } catch (e) {
+        console.error('Error scheduling notification:', e);
+      }
+
       // Schedule next update
       if (isAfter(now, today8AM) && isBefore(now, tomorrow8AM)) {
         const timeUntilTomorrow = tomorrow8AM.getTime() - now.getTime();
@@ -299,7 +332,17 @@ const Index = () => {
       }
     };
 
+    // Handle notification clicks
+    LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+      const quoteIndex = notification.notification.extra.quoteIndex;
+      setCurrentQuoteIndex(quoteIndex);
+    });
+
     updateDailyQuote();
+
+    return () => {
+      LocalNotifications.removeAllListeners();
+    };
   }, []);
 
   const handlePrevious = () => {
